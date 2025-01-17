@@ -1,0 +1,10 @@
+/filesystem
+/linglong
+*.layer
+*.uab
+/linglong.yaml
+/apt.conf
+/sources.list
+/package.info
+events
+tests

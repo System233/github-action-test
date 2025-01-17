@@ -1,0 +1,16 @@
+version: "1"
+
+package:
+  id: ll-killer-generator
+  name: 玲珑杀手生成器
+  version: 0.0.0.1
+  kind: app
+  description: |
+    玲珑杀手生成器
+
+command: [entrypoint.sh] 
+
+base: org.deepin.base/23.1.0 
+
+build: |
+  ./install.sh bash -c './generate.sh'

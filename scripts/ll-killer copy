@@ -1,0 +1,127 @@
+#!/bin/bash
+set -e
+ROOT_DIR=$(dirname $(readlink -f "$0"))
+source "$ROOT_DIR/env.sh"
+SELF="$0"
+# DIFF_DIR=$(realpath "$1")
+MODE="$1"
+SHELL=${SHELL:-/bin/bash}
+shift 1 || true
+ARGS=("${@}")
+
+LINGLONG_SRC_DIR=/project/linglong/sources
+LL_WORK_DIR=$(pwd)
+OVERLAY_DIR=$LL_WORK_DIR/filesystem
+MERGED_DIR=$OVERLAY_DIR/merged
+UPPER_DIR=$OVERLAY_DIR/upper
+WORK_DIR=$OVERLAY_DIR/work
+OLDFS_DIR=$MERGED_DIR/rootfs
+ROOTFS_DIR=/run/host/rootfs
+
+export PATH=$PATH:$ROOTFS_DIR/bin:$ROOTFS_DIR/sbin
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$ROOTFS_DIR/usr/lib/x86_64-linux-gnu
+
+function mount_rootfs() {
+    # lower, merged
+    rm -rf $OVERLAY_DIR
+    mkdir -p "$UPPER_DIR" "$WORK_DIR" "$1" "$2"
+    fuse-overlayfs -o "lowerdir=$1,upperdir=$UPPER_DIR,workdir=$WORK_DIR,squash_to_root" "$2"
+}
+function mount_fuse() {
+    touch /dev/fuse
+    mount --bind $ROOTFS_DIR/dev/fuse /dev/fuse
+}
+function mount_data() {
+    mount --rbind /dev $MERGED_DIR/dev
+    DPKG_EXEC="$DPKG_EXEC" perl -pe 's/{DPKG_EXEC}/$ENV{DPKG_EXEC}/' "$APT_CONF" >"$LL_WORK_DIR/apt.conf"
+    touch "$MERGED_DIR/etc/apt/apt.conf.d/ll-killer"
+    mount --bind "$LL_WORK_DIR/apt.conf" "$MERGED_DIR/etc/apt/apt.conf.d/ll-killer"
+    if [ -f apt.conf ]; then
+        touch $MERGED_DIR/etc/apt/apt.conf.d/config
+        mount --bind apt.conf $MERGED_DIR/etc/apt/apt.conf.d/config
+    fi
+    if [ -f sources.list ]; then
+        mount --bind sources.list $MERGED_DIR/etc/apt/sources.list
+    fi
+    if [ -d sources.list.d ]; then
+        mount --rbind sources.list.d $MERGED_DIR/etc/apt/sources.list.d
+    fi
+    mkdir -p $LINGLONG_SRC_DIR
+    mount --rbind $LINGLONG_SRC_DIR $MERGED_DIR/var/cache/apt/archives
+    mount --rbind /tmp $MERGED_DIR/tmp
+    mount --rbind /home $MERGED_DIR/home
+    mount --rbind /proc $MERGED_DIR/proc
+}
+function clean() {
+    find "$UPPER_DIR" '(' -type c -or -name ".wh..*opq" ')' -exec rm -f {} \;
+    rm -rf "$UPPER_DIR/rootfs" "$UPPER_DIR/var/cache"
+}
+function copy() {
+    cp -arfT "$UPPER_DIR" "$PREFIX"
+}
+function reexec() {
+    # mode cmd ...args
+    next=$1
+    shift
+    exec "$@" "$SELF" "$next" "${ARGS[@]}"
+}
+case "$MODE" in
+root)
+    reexec mount unshare -rm
+    ;;
+mount)
+    mount_fuse
+    mount_rootfs / $MERGED_DIR
+    mount_data
+    reexec pivot_root unshare -m
+    ;;
+pivot_root)
+    mkdir -p $OLDFS_DIR
+    pivot_root "$MERGED_DIR" "$OLDFS_DIR"
+    reexec shell
+    ;;
+shell)
+    "${ARGS[@]:-$SHELL}"
+    ;;
+clean)
+    clean
+    ;;
+copy)
+    copy
+    ;;
+install)
+    clean
+    copy
+    ;;
+build)
+    exec "$ROOT_DIR/install.sh" "$ROOT_DIR/build.sh" "$@"
+    ;;
+generate)
+    exec "$ROOT_DIR/generate.sh" "$@"
+    ;;
+setup)
+    exec "$ROOT_DIR/setup.sh" "$@"
+    ;;
+extract)
+    exec "$ROOT_DIR/extract.sh" "$@"
+    ;;
+dpkg-install)
+    exec "$SELF" -- "$ROOT_DIR/dpkg-install.sh" "$@"
+    ;;
+dev-host)
+    mkdir /rootfs
+    mount --rbind $ROOTFS_DIR /rootfs
+    mount --rbind /tmp /rootfs/tmp
+    mkdir -p /tmp/llfs
+    reexec mount pivot_root /rootfs /rootfs/tmp/llfs
+    ;;
+dev)
+    reexec dev-host unshare -rm
+    ;;
+--)
+    reexec root
+    ;;
+*)
+    # reexec root
+    ;;
+esac
