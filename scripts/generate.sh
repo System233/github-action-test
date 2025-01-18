@@ -62,7 +62,9 @@ APP_DESC=${APP_DESC:-$PKG_DESC}
 APP_BASE=$(pkg_info_local Base | head -n1)
 APP_RUNTIME=$(pkg_info_local Runtime | head -n1)
 APP_SOURCES=$(pkg_info_local APT-Sources)
-APP_BASE=${APP_BASE:-"org.deepin.base/23.1.0"}
+
+DEFAULT_BASE=${DEFAULT_BASE:-"org.deepin.base/23.1.0"}
+APP_BASE=${APP_BASE:-$DEFAULT_BASE}
 
 assert "$APP_ID" "'Package' not defined"
 PKG=$(pkg_info_local Package)
