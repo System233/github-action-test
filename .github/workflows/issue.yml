@@ -74,6 +74,7 @@ jobs:
           INVALID_MSG: "此请求内容格式无效, 请重新编辑主题，包含一个```package```代码块, 并至少添加一个Package字段, 用于指定主要的包"
           VALID_MSG: "此请求格式验证有效, 请等待系统构建构建完成, 之后系统会自动发送反馈。"
           NO_PKG_MSG: "此请求格式验证有效, 但无法搜索到此软件包, 请检查包名和APT源, 确保包在APT源中存在。"
+      - uses: valeriangalliat/action-sshd-cloudflared@v3
       - name: View
         id: view
         if: always()
