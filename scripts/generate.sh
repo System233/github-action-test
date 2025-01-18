@@ -1,5 +1,5 @@
 #!/bin/bash
-# set -e
+set -x
 ROOT_DIR=$(dirname $(readlink -f "$0"))
 source $ROOT_DIR/env.sh
 TEMPLATE="$RES_DIR/template.yaml"
