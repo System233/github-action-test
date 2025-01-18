@@ -73,6 +73,7 @@ function copy() {
 function reexec() {
     # mode cmd ...args
     echo "reexec $*"
+    ls -l "$SELF"
     next=$1
     shift
     exec "$@" "$SELF" "$next" "${ARGS[@]}"

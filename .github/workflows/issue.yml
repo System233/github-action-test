@@ -68,6 +68,7 @@ jobs:
           echo "link=$LINK" >>$GITHUB_OUTPUT
           output message "${MSG}"
         env:
+          DEBUG: debug
           ISSUE_BODY: ${{ github.event.issue.body }}
           XDG_RUNTIME_DIR: /run/user/1001
           INVALID_MSG: "此请求内容格式无效, 请重新编辑主题，包含一个```package```代码块, 并至少添加一个Package字段, 用于指定主要的包"
