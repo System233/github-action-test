@@ -1,5 +1,7 @@
 #!/bin/bash
-set -x
+if [ -n "$DEBUG" ]; then
+    set -x
+fi
 ROOT_DIR=$(dirname $(readlink -f "$0"))
 source $ROOT_DIR/env.sh
 TEMPLATE="$RES_DIR/template.yaml"

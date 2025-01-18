@@ -1,5 +1,8 @@
 #!/bin/bash
 set -e
+if [ -n "$DEBUG" ]; then
+    set -x
+fi
 ROOT_DIR=$(dirname $(readlink -f "$0"))
 source "$ROOT_DIR/env.sh"
 SELF=$(readlink -f "$0")

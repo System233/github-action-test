@@ -9,6 +9,7 @@ env:
   ACT: true
   NO_INSTALL: true
   NO_BUILD: true
+  DEBUG: true
 jobs:
   issue:
     name: Issue
