@@ -6,7 +6,7 @@ on:
   issues:
     types: [opened,edited]
 env:
-  ACT: false
+  ACT: true
   NO_INSTALL: true
   NO_BUILD: true
 jobs:
@@ -28,21 +28,22 @@ jobs:
           ll-cli --version
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/linglong-builder/
-          key: linglong-builder-cache
       - name: Check
         id: check
         run: |
-          PKG_INFO="$BODY"|grep -zoP '```package\s*\K[\s\S]*(?=```)'
-          LINK="https://$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-          RUNNING=https://img.shields.io/badge/build-%E8%BF%90%E8%A1%8C%E4%B8%AD-blue
+          PKG_INFO=$(echo "$ISSUE_BODY"|grep -zoP '```package\s*\K[\s\S]*(?=```)')
+
+          LINK="https://$GITHUB_SERVER_URL/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
+          RUNNING="https://img.shields.io/badge/build-%E8%BF%90%E8%A1%8C%E4%B8%AD-blue"
           STATUS_ICON="![状态]($RUNNING)"
           STATUS_LINK="[$STATUS_ICON]($LINK)"
-          if [ -z "$PKG_INFO" ]|| echo "$PKG_INFO"| grep -vq "^Package:";then
+          function output(){
+            echo "$1<<EOF" >>$GITHUB_OUTPUT
+            echo "$2" >>$GITHUB_OUTPUT
+            echo "EOF" >>$GITHUB_OUTPUT
+          }
+          if [ -z "$PKG_INFO" ] || ! echo "$PKG_INFO" | grep -q "^Package:";then
             MSG="$INVALID_MSG"
             VALID=no
           else
@@ -55,18 +56,18 @@ jobs:
               YAML=$(printf '\n```yaml\n%s\n```\n' "$(cat linglong.yaml)")
               STATUS="* linglong.yaml $STATUS_LINK"
               MSG=$(printf "%s\n%s\n%s\n" "$VALID_MSG" "$STATUS" "$YAML")
-              package=$(./scripts/pkg_info.sh Package)
-              echo "package=$package" >>$GITHUB_OUTPUT
-              echo "config=$(cat package.info)" >>$GITHUB_OUTPUT
-              echo "linglong=$(cat linglong.yaml)" >>$GITHUB_OUTPUT
+              package=$(cat package.info | sed -n "/^Package:/,/^[^ ]/p" | sed -E -e "s/^Package://" | grep '^\s' | sed -e 's/^\s*//' )
+              output package "$package"
+              output config "$(cat package.info)"
+              output linglong "$(cat linglong.yaml)"
             fi
           fi
           
           echo "valid=${VALID}" >>$GITHUB_OUTPUT
-          echo "message=${MSG}" >>$GITHUB_OUTPUT
           echo "link=$LINK" >>$GITHUB_OUTPUT
+          output message "${MSG}"
         env:
-          BODY: ${{ github.event.issue.body }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
           XDG_RUNTIME_DIR: /run/user/1001
           INVALID_MSG: "此请求内容格式无效, 请重新编辑主题，包含一个```package```代码块, 并至少添加一个Package字段, 用于指定主要的包"
           VALID_MSG: "此请求格式验证有效, 请等待系统构建构建完成, 之后系统会自动发送反馈。"
@@ -76,12 +77,12 @@ jobs:
         if: always()
         run: |
           # Fetch all comments from the issue
-          EXISTING_COMMENT=$(gh api --method GET /repos/${{ github.repository }}/issues/$ISSUE_NUMBER/comments -q 'map(select(.user.login=="${{env.BOT_NAME}}"))[0]')
+          EXISTING_COMMENT=$(gh api -X GET /repos/${{ github.repository }}/issues/$ISSUE_NUMBER/comments -q 'map(select(.user.login=="${{env.BOT_NAME}}"))[0]')
           if [[ -n "$EXISTING_COMMENT" ]]; then
             # Extract the ID of the existing comment
             # Update the existing comment
             gh api \
-              --method PATCH \
+              -X PATCH \
               -H "Accept: application/vnd.github+json" \
               /repos/${{ github.repository }}/issues/comments/$COMMENT_ID \
               -f body="$UPDATE_COMMENT_BODY"
@@ -89,13 +90,20 @@ jobs:
           else
             echo "No existing comment by $BOT_NAME found. Creating a new comment."
             # Create a new comment
-            COMMENT_ID=$(gh issue comment $ISSUE_NUMBER --body "$NET_COMMENT_BODY"| jq ".id") ##TODO
+            COMMENT_ID=$(gh api -X POST "/repos/${{ github.repository }}/issues/$ISSUE_NUMBER/comments" -f body="$NET_COMMENT_BODY" | jq ".id") 
           fi
           echo "comment_id=${COMMENT_ID}" >>$GITHUB_OUTPUT
         env:
           BOT_NAME: github-actions[bot]
           NET_COMMENT_BODY: "你刚刚创建了此构建请求, ${{steps.check.outputs.message}}"
           UPDATE_COMMENT_BODY: "你刚刚更新了此构建请求, ${{steps.check.outputs.message}}"
+      - name: Cache
+        uses: actions/cache@v4
+        if: ${{steps.check.outputs.valid=='yes'}}
+        with:
+          path: |
+            ~/.cache/linglong-builder/
+          key: linglong-builder-cache
       - name: Build
         id: build
         if: ${{steps.check.outputs.valid=='yes'}}

@@ -12,14 +12,14 @@ OUTPUT="${GEN_YAML_OUTPUT:-linglong.yaml}"
 
 function pkg_info_local() {
     field="$1"
-    cat package.info | sed -n "/^$field:/,/^[^ ]/p" | sed -e "s/^$field://" | grep '^\s'
+    cat package.info | sed -n "/^$field:/,/^[^ ]/p" | sed -e "s/^$field://" | grep '^\s' | sed -e "s/^\s*//"
 }
 function pkg_info() {
     pkg="$1"
     field="$2"
     result=$(pkg_info_local "$field")
     if [ -z "$result" ]; then
-        result=$(apt-cache show "$pkg" --no-all-versions | sed -n "/^$field:/,/^[^ ]/p" | sed -e "s/^$field://" | grep '^\s')
+        result=$(apt-cache show "$pkg" --no-all-versions | sed -n "/^$field:/,/^[^ ]/p" | sed -e "s/^$field://" | grep '^\s' | sed -e "s/^\s*//")
     fi
     echo "$result"
 }
