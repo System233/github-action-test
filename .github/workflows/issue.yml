@@ -41,6 +41,7 @@ jobs:
           LINK="$GITHUB_SERVER_URL/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
 
           RUNNING="https://img.shields.io/badge/build-%E8%BF%90%E8%A1%8C%E4%B8%AD-blue"
+
           STATUS_ICON="![状态]($RUNNING)"
           STATUS_LINK="[$STATUS_ICON]($LINK)"
           TIME=$(LC_TIME=zh_CN.UTF-8 date)
@@ -48,6 +49,10 @@ jobs:
             echo "$1<<EOF" >>$GITHUB_OUTPUT
             echo "$2" >>$GITHUB_OUTPUT
             echo "EOF" >>$GITHUB_OUTPUT
+          }
+          function pkg_info(){
+            field=$1
+            cat package.info | sed -n "/^$field:/,/^[^ ]/p" | sed -E -e "s/^$field://" | grep '^\s' | sed -e 's/^\s*//'
           }
           if [ -z "$PKG_INFO" ] || ! echo "$PKG_INFO" | grep -q "^Package:";then
             MSG="$INVALID_MSG"
@@ -70,10 +75,12 @@ jobs:
           
           \`\`\`package${LF}${PKG_INFO}${LF}\`\`\`
               "
-              package=$(cat package.info | sed -n "/^Package:/,/^[^ ]/p" | sed -E -e "s/^Package://" | grep '^\s' | sed -e 's/^\s*//' )
+              base=$(grep -oP 'base:\s*\K.*$' linglong.yaml )
+              package=$(pkg_info Package)
               output package "$package"
               output config "$(cat package.info)"
               output linglong "$(cat linglong.yaml)"
+              echo "base=$base" >>$GITHUB_OUTPUT
             fi
           fi
           
@@ -124,7 +131,7 @@ jobs:
         with:
           path: |
             ~/.cache/linglong-builder/
-          key: linglong-builder-cache
+          key: linglong-builder-cache-${{steps.check.outputs.base}}
       - name: Build
         id: build
         if: ${{steps.check.outputs.valid=='yes'}}
@@ -144,6 +151,8 @@ jobs:
           BODY: ${{ github.event.issue.body }}
           XDG_RUNTIME_DIR: /run/user/1001
         working-directory: ${{ env.WORKING_DIR }}
+      - uses: valeriangalliat/action-sshd-cloudflared@v3
+        if: failure()
       - name: Reply Fail
         if: failure()
         run: |
