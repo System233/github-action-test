@@ -2,6 +2,7 @@
 name: Check Request
 permissions:
   issues: write
+  contents: write
 on: 
   issues:
     types: [opened,edited]
@@ -11,8 +12,8 @@ env:
   DEBUG: false
   WORKING_DIR: /tmp/ll-killer
 jobs:
-  issue:
-    name: Issue
+  process:
+    name: Process
     if: ${{ !github.event.issue.pull_request&&github.event.issue.state=='open' }}
     runs-on: ubuntu-latest
     steps:
@@ -33,7 +34,7 @@ jobs:
 
           STATUS_ICON="![状态]($RUNNING)"
           STATUS_LINK="[$STATUS_ICON]($LINK)"
-          TIME=$(LC_TIME=zh_CN.UTF-8 date)
+          TIME=$(LC_ALL=zh_CN.UTF-8 date)
           function output(){
             echo "$1<<EOF" >>$GITHUB_OUTPUT
             echo "$2" >>$GITHUB_OUTPUT
@@ -151,11 +152,31 @@ jobs:
           BODY: ${{ github.event.issue.body }}
           XDG_RUNTIME_DIR: /run/user/1001
         working-directory: ${{ env.WORKING_DIR }}
+      - name: Release
+        if: ${{steps.check.outputs.valid=='yes'}}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{steps.check.outputs.package}}-${{github.event.issue.number}}
+          body: |
+            此构建请求来自 #${{github.event.issue.number}}, 构建目标为 `${{steps.check.outputs.package}}`。
+            * 构建参数
+            ```
+            ${{steps.check.outputs.config}}
+            ```
+            * linglong.yaml 项目文件
+            ```
+            ${{steps.check.outputs.linglong}}
+            ```
+          prerelease: ${{github.event.issue.state=='open'}}
+          files: |
+            package.info
+            linglong.yaml
+            ${{steps.build.outputs.output}}
       - name: Reply Fail
         if: failure()
         run: |
           ERROR_ICON=https://img.shields.io/badge/build-%E6%9E%84%E5%BB%BA%E5%A4%B1%E8%B4%A5-red
-          TIME=$(LC_TIME=zh_CN.UTF-8 date)
+          TIME=$(LC_ALL=zh_CN.UTF-8 date)
           STATUS_ICON="![状态]($ERROR_ICON)"
           STATUS_LINK="[$STATUS_ICON]($LINK)"
           LF=$'\n'
@@ -186,23 +207,38 @@ jobs:
           LINK: ${{steps.check.outputs.link}}
           FAIL_MSG: "构建失败, 请检查配置或工作流输出。"
         working-directory: ${{ env.WORKING_DIR }}
-      - name: Release
-        if: ${{steps.check.outputs.valid=='yes'}}
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{steps.check.outputs.package}}-${{github.event.issue.number}}
-          body: |
-            此构建请求来自 #${{github.event.issue.number}}, 构建目标为 `${{steps.check.outputs.package}}`。
-            * 构建参数
-            ```
-            ${{steps.check.outputs.config}}
-            ```
-            * linglong.yaml 项目文件
-            ```
-            ${{steps.check.outputs.linglong}}
-            ```
-          prerelease: ${{github.event.issue.state=='open'}}
-          files: |
-            package.info
-            linglong.yaml
-            ${{steps.build.outputs.output}}
+      - name: Reply Success
+        if: success()
+        run: |
+          OK_ICON="https://img.shields.io/badge/build-%E6%9E%84%E5%BB%BA%E6%88%90%E5%8A%9F-brigthgreen"
+          TIME=$(LC_ALL=zh_CN.UTF-8 date)
+          STATUS_ICON="![状态]($OK_ICON)"
+          STATUS_LINK="[$STATUS_ICON]($LINK)"
+          LF=$'\n'
+          UPDATE_COMMENT_BODY="${FAIL_MSG}
+
+          $TIME
+          $STATUS_LINK
+
+          * linglong.yaml
+          \`\`\`yaml
+          $(cat linglong.yaml)
+          \`\`\`
+          
+          \`\`\`package
+          $(cat package.info)
+          \`\`\`
+          "
+          gh api \
+            --method PATCH \
+            -H "Accept: application/vnd.github+json" \
+            /repos/${{ github.repository }}/issues/comments/$COMMENT_ID \
+            -f body="$UPDATE_COMMENT_BODY"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BODY: ${{ github.event.issue.body }}
+          XDG_RUNTIME_DIR: /run/user/1001
+          COMMENT_ID: ${{steps.view.outputs.comment_id}}
+          LINK: ${{steps.check.outputs.link}}
+          FAIL_MSG: "构建失败, 请检查配置或工作流输出。"
+        working-directory: ${{ env.WORKING_DIR }}

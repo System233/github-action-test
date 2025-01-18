@@ -3,7 +3,7 @@ run-name: Build Cache
 on:
   workflow_dispatch:
   schedule:
-      - cron: '0 0 * * *'
+      - cron: '0 0 */7 * *'
 jobs:
   cache:
     runs-on: ubuntu-24.04
