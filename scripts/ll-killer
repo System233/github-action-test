@@ -71,6 +71,9 @@ function copy() {
 }
 function reexec() {
     # mode cmd ...args
+    if [ -n "$DEBUG" ]; then
+        echo "reexec $*"
+    fi
     next=$1
     shift
     exec "$@" "$SELF" "$next" "${ARGS[@]}"
