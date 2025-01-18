@@ -1,0 +1,48 @@
+name: Comment or Update Issue Comment
+
+on:
+  issues:
+    types:
+      - opened
+      - edited
+
+jobs:
+  comment-or-update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up gh CLI
+        run: gh auth status
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check existing comments and update or create
+        run: |
+          ISSUE_NUMBER=${{ github.event.issue.number }}
+          BOT_USERNAME="github-actions[bot]"
+          COMMENT_BODY="Thank you for your contribution! This is an automated message to help us track progress on this issue."
+
+          # Fetch all comments from the issue
+          EXISTING_COMMENT=$(gh issue list-comments $ISSUE_NUMBER --json body,id,author --jq ".[] | select(.author.login == \\\"$BOT_USERNAME\\\")")
+
+          if [[ -n "$EXISTING_COMMENT" ]]; then
+            # Extract the ID of the existing comment
+            COMMENT_ID=$(echo "$EXISTING_COMMENT" | jq -r .id)
+            echo "Found an existing comment by $BOT_USERNAME with ID $COMMENT_ID. Updating it."
+
+            # Update the existing comment
+            gh api \
+              --method PATCH \
+              -H "Accept: application/vnd.github+json" \
+              /repos/${{ github.repository }}/issues/comments/$COMMENT_ID \
+              -f body="$COMMENT_BODY"
+          else
+            echo "No existing comment by $BOT_USERNAME found. Creating a new comment."
+
+            # Create a new comment
+            gh issue comment $ISSUE_NUMBER --body "$COMMENT_BODY"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
