@@ -7,9 +7,9 @@ on:
     types: [opened,edited]
 env:
   ACT: true
-  NO_INSTALL: true
-  NO_BUILD: true
-  DEBUG: true
+  NO_INSTALL: false
+  NO_BUILD: false
+  DEBUG: false
   WORKING_DIR: /tmp/ll-killer
 jobs:
   issue:
@@ -60,8 +60,8 @@ jobs:
             else
               VALID=yes
               YAML=$(printf '\n```yaml\n%s\n```\n' "$(cat linglong.yaml)")
-              STATUS="* linglong.yaml $STATUS_LINK"
-              MSG=$(printf "%s\n%s\n%s\n" "$VALID_MSG" "$STATUS" "$YAML")
+              STATUS="* linglong.yaml"
+              MSG=$(printf "%s\n%s\n%s\n%s\n" "$VALID_MSG" "$STATUS_LINK" "$STATUS" "$YAML")
               package=$(cat package.info | sed -n "/^Package:/,/^[^ ]/p" | sed -E -e "s/^Package://" | grep '^\s' | sed -e 's/^\s*//' )
               output package "$package"
               output config "$(cat package.info)"
@@ -110,13 +110,13 @@ jobs:
           NET_COMMENT_BODY: "你刚刚创建了此构建请求, ${{steps.check.outputs.message}}"
           UPDATE_COMMENT_BODY: "你刚刚更新了此构建请求, ${{steps.check.outputs.message}}"
         working-directory: ${{ env.WORKING_DIR }}
-      # - name: Cache
-      #   uses: actions/cache@v4
-      #   if: ${{steps.check.outputs.valid=='yes'}}
-      #   with:
-      #     path: |
-      #       ~/.cache/linglong-builder/
-      #     key: linglong-builder-cache
+      - name: Cache
+        uses: actions/cache@v4
+        if: ${{steps.check.outputs.valid=='yes'}}
+        with:
+          path: |
+            ~/.cache/linglong-builder/
+          key: linglong-builder-cache
       - name: Build
         id: build
         if: ${{steps.check.outputs.valid=='yes'}}
@@ -142,9 +142,10 @@ jobs:
           ERROR_ICON=https://img.shields.io/badge/build-%E6%9E%84%E5%BB%BA%E5%A4%B1%E8%B4%A5-red
           YAML=$(printf '\n```yaml\n%s\n```\n' "$(cat linglong.yaml)")
           STATUS_ICON="![状态]($ERROR_ICON)"
-          STATUS="* linglong.yaml [$STATUS_ICON]($LINK)"
+          STATUS_LINK=[$STATUS_ICON]($LINK)
+          STATUS="* linglong.yaml"
           PKG_INFO=$(printf '\n```package\n%s\n```\n' "$(cat package.info)")
-          UPDATE_COMMENT_BODY=$(printf "%s\n%s\n%s\n%s\n" "$FAIL_MSG" "$STATUS" "$YAML" "$PKG_INFO")
+          UPDATE_COMMENT_BODY=$(printf "%s\n%s\n%s\n%s\n%s\n" "$FAIL_MSG" "$STATUS_LINK" "$STATUS" "$YAML" "$PKG_INFO")
           gh api \
             --method PATCH \
             -H "Accept: application/vnd.github+json" \
@@ -162,9 +163,9 @@ jobs:
         if: ${{steps.check.outputs.valid=='yes'}}
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{steps.check.outputs.package}}-${{github.event.issue.id}}
+          tag_name: ${{steps.check.outputs.package}}-${{github.event.issue.number}}
           body: |
-            此构建请求来自 #${{github.event.issue.id}}, 构建目标为 `${{steps.check.outputs.package}}`。
+            此构建请求来自 #${{github.event.issue.number}}, 构建目标为 `${{steps.check.outputs.package}}`。
             * 构建参数
             ```
             ${{steps.check.outputs.config}}
@@ -175,6 +176,6 @@ jobs:
             ```
           prerelease: ${{github.event.issue.state=='open'}}
           files: |
-            "package.info"
-            "linglong.yaml"
+            package.info
+            linglong.yaml
             ${{steps.build.outputs.output}}
