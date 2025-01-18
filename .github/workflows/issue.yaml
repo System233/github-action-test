@@ -22,10 +22,9 @@ jobs:
       - name: Check existing comments and update or create
         run: |
           ISSUE_NUMBER=${{ github.event.issue.number }}
-          BOT_USERNAME="github-actions"
           COMMENT_BODY="Thank you for your contribution! This is an automated message to help us track progress on this issue."
           # Fetch all comments from the issue
-          EXISTING_COMMENT=$(gh issue view $ISSUE_NUMBER -c --json comments --jq ".comments | map(select(.author.login == \"$BOT_USERNAME\"))[0]")
+          EXISTING_COMMENT=$(gh api --method GET /repos/${{ github.repository }}/issues/$ISSUE_NUMBER/comments -q  'map(select(.user.login==\"github-actions[bot]\"))[0]')
           if [[ -n "$EXISTING_COMMENT" ]]; then
             # Extract the ID of the existing comment
             COMMENT_ID=$(echo "$EXISTING_COMMENT" | jq -r .id)
@@ -35,7 +34,7 @@ jobs:
             gh api \
               --method PATCH \
               -H "Accept: application/vnd.github+json" \
-              /repos/${{ github.repository }}/issues/comments/$COMMENT_ID \
+              /repos/${{ github.repository }}/issues/$ISSUE_NUMBER/comments/$COMMENT_ID \
               -f body="[updated] $COMMENT_BODY"
           else
             echo "No existing comment by $BOT_USERNAME found. Creating a new comment."
