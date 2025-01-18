@@ -62,17 +62,13 @@ jobs:
               YAML=$(printf '\n```yaml\n%s\n```\n' "$(cat linglong.yaml)")
               MSG="$VALID_MSG
 
-              $TIME
-              $STATUS_LINK
+          $TIME
+          $STATUS_LINK
 
-              * linglong.yaml
-              \`\`\`yaml
-              $(cat linglong.yaml)
-              \`\`\`
-              
-              \`\`\`package
-              $PKG_INFO
-              \`\`\`
+          * linglong.yaml
+          \`\`\`yaml${LF}$(cat linglong.yaml)${LF}\`\`\`
+          
+          \`\`\`package${LF}${PKG_INFO}${LF}\`\`\`
               "
               package=$(cat package.info | sed -n "/^Package:/,/^[^ ]/p" | sed -E -e "s/^Package://" | grep '^\s' | sed -e 's/^\s*//' )
               output package "$package"
@@ -133,7 +129,7 @@ jobs:
         id: build
         if: ${{steps.check.outputs.valid=='yes'}}
         run: |
-          if [ "${{env.NO_BUILD}}" !="true" ];then
+          if [ "${{env.NO_BUILD}}" != "true" ];then
             sudo mkdir -p $XDG_RUNTIME_DIR
             sudo chown -R 1001:1001 $XDG_RUNTIME_DIR
             sudo chmod 0700 $XDG_RUNTIME_DIR
