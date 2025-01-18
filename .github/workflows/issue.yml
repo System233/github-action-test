@@ -48,7 +48,7 @@ jobs:
             VALID=no
           else
             echo "$PKG_INFO">package.info
-            if ! ./ll-killer generate;then
+            if ! sudo ./ll-killer generate;then
               VALID=no
               MSG="$NO_PKG_MSG"
             else
