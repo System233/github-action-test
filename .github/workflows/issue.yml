@@ -94,6 +94,7 @@ jobs:
           fi
           echo "comment_id=${COMMENT_ID}" >>$GITHUB_OUTPUT
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BOT_NAME: github-actions[bot]
           NET_COMMENT_BODY: "你刚刚创建了此构建请求, ${{steps.check.outputs.message}}"
           UPDATE_COMMENT_BODY: "你刚刚更新了此构建请求, ${{steps.check.outputs.message}}"
@@ -137,6 +138,7 @@ jobs:
             /repos/${{ github.repository }}/issues/comments/$COMMENT_ID \
             -f body="$UPDATE_COMMENT_BODY"
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BODY: ${{ github.event.issue.body }}
           XDG_RUNTIME_DIR: /run/user/1001
           COMMENT_ID: ${{steps.view.outputs.comment_id}}
