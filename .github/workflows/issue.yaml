@@ -24,9 +24,8 @@ jobs:
           ISSUE_NUMBER=${{ github.event.issue.number }}
           BOT_USERNAME="github-actions[bot]"
           COMMENT_BODY="Thank you for your contribution! This is an automated message to help us track progress on this issue."
-
           # Fetch all comments from the issue
-          EXISTING_COMMENT=$(gh issue view $ISSUE_NUMBER -c --json comments --jq ".comments[] | select(.author.login == \"$BOT_USERNAME\")")
+          EXISTING_COMMENT=$(gh issue view $ISSUE_NUMBER -c --json comments --jq ".comments | map(select(.author.login == \"$BOT_USERNAME\"))[0]")
           if [[ -n "$EXISTING_COMMENT" ]]; then
             # Extract the ID of the existing comment
             COMMENT_ID=$(echo "$EXISTING_COMMENT" | jq -r .id)
