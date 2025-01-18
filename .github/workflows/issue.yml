@@ -5,7 +5,10 @@ permissions:
 on: 
   issues:
     types: [opened,edited]
-
+env:
+  ACT: false
+  NO_INSTALL: true
+  NO_BUILD: true
 jobs:
   issue:
     name: Issue
@@ -13,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install linglong
-        if: ${{ !env.ACT }}
+        if: ${{ !env.ACT&&!env.NO_INSTALL }}
         run: |
           dpkg -l | grep libc6
           sudo apt install -y apt-transport-https ca-certificates curl gpg
@@ -97,11 +100,15 @@ jobs:
         id: build
         if: ${{steps.check.outputs.valid=='yes'}}
         run: |
-          sudo mkdir -p $XDG_RUNTIME_DIR
-          sudo chown -R 1001:1001 $XDG_RUNTIME_DIR
-          sudo chmod 0700 $XDG_RUNTIME_DIR
-          ll-builder build
-          ll-builder export -l
+          if [ ${{env.NO_BUILD}} !="true" ];then
+            sudo mkdir -p $XDG_RUNTIME_DIR
+            sudo chown -R 1001:1001 $XDG_RUNTIME_DIR
+            sudo chmod 0700 $XDG_RUNTIME_DIR
+            ll-builder build
+            ll-builder export -l
+          else
+            echo "test" > "${{steps.check.outputs.package}}_binary.layer"
+          fi
           output=$(basename $(find . -name "*binary.layer"))
           echo "output=${output}" >>$GITHUB_OUTPUT
         env:
