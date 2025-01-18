@@ -81,7 +81,9 @@ jobs:
           if [[ -n "$EXISTING_COMMENT" ]]; then
             # Extract the ID of the existing comment
             # Update the existing comment
+            echo "$EXISTING_COMMENT"
             COMMENT_ID=$(echo "$EXISTING_COMMENT" | jq -r .id)
+            echo "Found an existing comment by $BOT_NAME with ID $COMMENT_ID. Updating it."
             gh api \
               -X PATCH \
               -H "Accept: application/vnd.github+json" \
