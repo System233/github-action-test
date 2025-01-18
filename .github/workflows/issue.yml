@@ -16,17 +16,6 @@ jobs:
     if: ${{ !github.event.issue.pull_request&&github.event.issue.state=='open' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Install linglong
-        # if: ${{ !env.ACT && !env.NO_INSTALL }}
-        run: |
-          dpkg -l | grep libc6
-          sudo apt install -y apt-transport-https ca-certificates curl gpg
-          sudo mkdir -p /etc/apt/keyrings/
-          curl -fsSL https://download.opensuse.org/repositories/home:/kamiyadm/xUbuntu_24.04/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/linglong-apt-keyring.gpg
-          echo "deb [signed-by=/etc/apt/keyrings/linglong-apt-keyring.gpg] https://download.opensuse.org/repositories/home:/kamiyadm/xUbuntu_24.04/ ./" | sudo tee /etc/apt/sources.list.d/linglong.list
-          sudo apt update
-          sudo apt install linglong-builder linglong-box linglong-bin xdg-utils -y
-          ll-cli --version
       - name: Checkout
         uses: actions/checkout@v4
       - name: Check
@@ -125,6 +114,17 @@ jobs:
           NET_COMMENT_BODY: "你刚刚创建了此构建请求, ${{steps.check.outputs.message}}"
           UPDATE_COMMENT_BODY: "你刚刚更新了此构建请求, ${{steps.check.outputs.message}}"
         working-directory: ${{ env.WORKING_DIR }}
+      - name: Install linglong
+        if: ${{steps.check.outputs.valid=='yes'}}
+        run: |
+          dpkg -l | grep libc6
+          sudo apt install -y apt-transport-https ca-certificates curl gpg
+          sudo mkdir -p /etc/apt/keyrings/
+          curl -fsSL https://download.opensuse.org/repositories/home:/kamiyadm/xUbuntu_24.04/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/linglong-apt-keyring.gpg
+          echo "deb [signed-by=/etc/apt/keyrings/linglong-apt-keyring.gpg] https://download.opensuse.org/repositories/home:/kamiyadm/xUbuntu_24.04/ ./" | sudo tee /etc/apt/sources.list.d/linglong.list
+          sudo apt update
+          sudo apt install linglong-builder linglong-box linglong-bin xdg-utils -y
+          ll-cli --version
       - name: Cache
         uses: actions/cache@v4
         if: ${{steps.check.outputs.valid=='yes'}}
@@ -151,8 +151,6 @@ jobs:
           BODY: ${{ github.event.issue.body }}
           XDG_RUNTIME_DIR: /run/user/1001
         working-directory: ${{ env.WORKING_DIR }}
-      - uses: valeriangalliat/action-sshd-cloudflared@v3
-        if: failure()
       - name: Reply Fail
         if: failure()
         run: |
