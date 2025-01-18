@@ -9,7 +9,7 @@ PKG_VERSION=$(pkg_info_local Version)
 if [ -n "$PKG_VERSION" ]; then
     PKG="$PKG=$PKG_VERSION"
 fi
-IFS=' ,$\n' read -r -a PKGS <<<"$(pkg_info_local Depends)"
+IFS=$' ,\n' read -r -a PKGS <<<"$(pkg_info_local Depends)"
 apt update -y
 dpkg --configure -a
 apt install --no-upgrade -yf "$PKG" "${PKGS[@]}"

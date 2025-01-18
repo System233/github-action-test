@@ -1,4 +1,5 @@
 #!/bin/bash
+# set -e
 ROOT_DIR=$(dirname $(readlink -f "$0"))
 source $ROOT_DIR/env.sh
 TEMPLATE="$RES_DIR/template.yaml"
@@ -34,6 +35,12 @@ function version() {
     done
     echo "${fields[0]}.${fields[1]}.${fields[2]}.${fields[3]}"
 }
+function assert() {
+    if [ -z "$1" ]; then
+        echo "$2" >&2
+        exit 1
+    fi
+}
 
 if [ -z "$MAIN_PKG" ]; then
     MAIN_PKG=$(pkg_info_local Package)
@@ -54,6 +61,14 @@ APP_BASE=$(pkg_info_local Base | head -n1)
 APP_RUNTIME=$(pkg_info_local Runtime | head -n1)
 APP_SOURCES=$(pkg_info_local APT-Sources)
 APP_BASE=${APP_BASE:-"org.deepin.base/23.1.0"}
+
+assert "$APP_ID" "'Package' not defined"
+PKG=$(pkg_info_local Package)
+PKG_VERSION=$(pkg_info_local Version)
+if [ -n "$PKG_VERSION" ]; then
+    PKG="$PKG=$PKG_VERSION"
+fi
+apt-cache show "$PKG" || exit 1
 
 cp "$TEMPLATE" "$OUTPUT"
 

@@ -13,7 +13,7 @@ export RAW_SELF=${RAW_SELF:-$SELF}
 export RAW_DPKG_EXEC=${RAW_DPKG_EXEC:-$DPKG_EXEC}
 RAW_HOST_FS_DIR=/run/host/rootfs
 HOST_FS_DIR=${HOST_FS_DIR:-$RAW_HOST_FS_DIR}
-ROOT_FS_DIR=${ROOT_FS_DIR:-}
+ROOT_FS_DIR=${ROOT_FS_DIR:-/}
 
 LINGLONG_SRC_DIR=$ROOT_FS_DIR/project/linglong/sources
 LL_WORK_DIR=$(pwd)
@@ -29,17 +29,15 @@ OLDFS_DIR=$MERGED_DIR/rootfs
 function mount_rootfs() {
     # lower, merged
     rm -rf $OVERLAY_DIR
-    lowerdir="$1"
-    mergeddir="$2"
     mkdir -p "$UPPER_DIR" "$WORK_DIR" "$1" "$2"
-    fuse-overlayfs -o "lowerdir=$lowerdir,upperdir=$UPPER_DIR,workdir=$WORK_DIR,squash_to_root" "$mergeddir"
+    fuse-overlayfs -o "lowerdir=$1,upperdir=$UPPER_DIR,workdir=$WORK_DIR,squash_to_root" "$2"
 }
 function mount_fuse() {
     touch /dev/fuse
     mount --bind $HOST_FS_DIR/dev/fuse /dev/fuse
 }
 function mount_data() {
-    mount --rbind ${ROOT_FS_DIR}/dev $MERGED_DIR/dev
+    mount --rbind $ROOT_FS_DIR/dev $MERGED_DIR/dev
     DPKG_EXEC="$RAW_DPKG_EXEC" perl -pe 's/{DPKG_EXEC}/$ENV{DPKG_EXEC}/' "$APT_CONF" >"$LL_WORK_DIR/apt.conf"
     touch "$MERGED_DIR/etc/apt/apt.conf.d/ll-killer"
     mount --bind "$LL_WORK_DIR/apt.conf" "$MERGED_DIR/etc/apt/apt.conf.d/ll-killer"
@@ -78,14 +76,14 @@ root)
     ;;
 mount)
     mount_fuse
-    mount_rootfs "${ROOT_FS_DIR:-/}" "$MERGED_DIR"
+    mount_rootfs $ROOT_FS_DIR $MERGED_DIR
     mount_data
     reexec pivot_root unshare -m
     ;;
 pivot_root)
     mkdir -p $OLDFS_DIR
     pivot_root "$MERGED_DIR" "$OLDFS_DIR"
-    ROOT_FS_DIR= HOST_FS_DIR=$RAW_HOST_FS_DIR SELF=$RAW_SELF reexec shell
+    ROOT_FS_DIR=/ HOST_FS_DIR=$RAW_HOST_FS_DIR SELF=$RAW_SELF reexec shell
     ;;
 shell)
     "${ARGS[@]:-$SHELL}"
@@ -103,22 +101,8 @@ install)
 build)
     exec "$ROOT_DIR/install.sh" "$ROOT_DIR/build.sh" "$@"
     ;;
-local)
-    reexec local-env unshare -rm
-    ;;
-local-env)
-    APT_TMP_DIR=$(mktemp -d ll-killer.XXXXXX -p /tmp)
-    ./scripts/pkg-info.sh APT-Sources >sources.list
-    mkdir -p sources.list.d "$APT_TMP_DIR/apt" "$APT_TMP_DIR/cache"
-    mount --bind ./sources.list /etc/apt/sources.list
-    mount --rbind ./sources.list.d /etc/apt/sources.list.d
-    mount --rbind "$APT_TMP_DIR/apt" /var/lib/apt
-    mount --rbind "$APT_TMP_DIR/cache" /var/cache
-    apt -o APT::Sandbox::User="root" update -y
-    exec "$ROOT_DIR/generate.sh" "$@"
-    ;;
 generate)
-    reexec local
+    exec "$ROOT_DIR/generate.sh" "$@"
     ;;
 setup)
     exec "$ROOT_DIR/setup.sh" "$@"
@@ -141,8 +125,7 @@ dev)
     reexec dev-host unshare -rm
     ;;
 --)
-    # reexec dev
-    reexec root
+    reexec dev
     ;;
 *)
     # reexec root

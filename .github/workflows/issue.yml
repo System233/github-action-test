@@ -1,0 +1,147 @@
+# https://docs.github.com/zh/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows
+
+on: 
+  issues:
+    types: [opened,edited]
+
+jobs:
+  issue:
+    name: Issue
+    if: ${{ !github.event.issue.pull_request&&github.event.issue.state=='open' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install linglong
+        if: ${{ !env.ACT }}
+        run: |
+          dpkg -l | grep libc6
+          sudo apt install -y apt-transport-https ca-certificates curl gpg
+          sudo mkdir -p /etc/apt/keyrings/
+          curl -fsSL https://download.opensuse.org/repositories/home:/kamiyadm/xUbuntu_24.04/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/linglong-apt-keyring.gpg
+          echo "deb [signed-by=/etc/apt/keyrings/linglong-apt-keyring.gpg] https://download.opensuse.org/repositories/home:/kamiyadm/xUbuntu_24.04/ ./" | sudo tee /etc/apt/sources.list.d/linglong.list
+          sudo apt update
+          sudo apt install linglong-builder linglong-box linglong-bin xdg-utils -y
+          ll-cli --version
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/linglong-builder/
+          key: linglong-builder-cache
+      - name: Check
+        id: check
+        run: |
+          PKG_INFO="$BODY"|grep -zoP '```package\s*\K[\s\S]*(?=```)'
+          LINK="https://$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          RUNNING=https://img.shields.io/badge/build-%E8%BF%90%E8%A1%8C%E4%B8%AD-blue
+          STATUS_ICON="![状态]($RUNNING)"
+          STATUS_LINK="[$STATUS_ICON]($LINK)"
+          if [ -z "$PKG_INFO" ]|| echo "$PKG_INFO"| grep -vq "^Package:";then
+            MSG="$INVALID_MSG"
+            VALID=no
+          else
+            echo "$PKG_INFO">package.info
+            if ! ./ll-killer generate;then
+              VALID=no
+              MSG="$NO_PKG_MSG"
+            else
+              VALID=yes
+              YAML=$(printf '\n```yaml\n%s\n```\n' "$(cat linglong.yaml)")
+              STATUS="* linglong.yaml $STATUS_LINK"
+              MSG=$(printf "%s\n%s\n%s\n" "$VALID_MSG" "$STATUS" "$YAML")
+              package=$(./scripts/pkg_info.sh Package)
+              echo "package=$package" >>$GITHUB_OUTPUT
+              echo "config=$(cat package.info)" >>$GITHUB_OUTPUT
+              echo "linglong=$(cat linglong.yaml)" >>$GITHUB_OUTPUT
+            fi
+          fi
+          
+          echo "valid=${VALID}" >>$GITHUB_OUTPUT
+          echo "message=${MSG}" >>$GITHUB_OUTPUT
+          echo "link=$LINK" >>$GITHUB_OUTPUT
+        env:
+          BODY: ${{ github.event.issue.body }}
+          XDG_RUNTIME_DIR: /run/user/1001
+          INVALID_MSG: "此请求内容格式无效, 请重新编辑主题，包含一个```package```代码块, 并至少添加一个Package字段, 用于指定主要的包"
+          VALID_MSG: "此请求格式验证有效, 请等待系统构建构建完成, 之后系统会自动发送反馈。"
+          NO_PKG_MSG: "此请求格式验证有效, 但无法搜索到此软件包, 请检查包名和APT源, 确保包在APT源中存在。"
+      - name: View
+        id: view
+        if: always()
+        run: |
+          # Fetch all comments from the issue
+          EXISTING_COMMENT=$(gh api --method GET /repos/${{ github.repository }}/issues/$ISSUE_NUMBER/comments -q 'map(select(.user.login=="${{env.BOT_NAME}}"))[0]')
+          if [[ -n "$EXISTING_COMMENT" ]]; then
+            # Extract the ID of the existing comment
+            # Update the existing comment
+            gh api \
+              --method PATCH \
+              -H "Accept: application/vnd.github+json" \
+              /repos/${{ github.repository }}/issues/comments/$COMMENT_ID \
+              -f body="$UPDATE_COMMENT_BODY"
+            echo "comment_id=${COMMENT_ID}" >>$GITHUB_OUTPUT
+          else
+            echo "No existing comment by $BOT_NAME found. Creating a new comment."
+            # Create a new comment
+            COMMENT_ID=$(gh issue comment $ISSUE_NUMBER --body "$NET_COMMENT_BODY"| jq ".id") ##TODO
+          fi
+          echo "comment_id=${COMMENT_ID}" >>$GITHUB_OUTPUT
+        env:
+          BOT_NAME: github-actions[bot]
+          NET_COMMENT_BODY: "你刚刚创建了此构建请求, ${{steps.check.outputs.message}}"
+          UPDATE_COMMENT_BODY: "你刚刚更新了此构建请求, ${{steps.check.outputs.message}}"
+      - name: Build
+        id: build
+        if: ${{steps.check.outputs.valid=='yes'}}
+        run: |
+          sudo mkdir -p $XDG_RUNTIME_DIR
+          sudo chown -R 1001:1001 $XDG_RUNTIME_DIR
+          sudo chmod 0700 $XDG_RUNTIME_DIR
+          ll-builder build
+          ll-builder export -l
+          output=$(basename $(find . -name "*binary.layer"))
+          echo "output=${output}" >>$GITHUB_OUTPUT
+        env:
+          BODY: ${{ github.event.issue.body }}
+          XDG_RUNTIME_DIR: /run/user/1001
+      - name: Reply Fail
+        if: failure()
+        run: |
+          ERROR_ICON=https://img.shields.io/badge/build-%E6%9E%84%E5%BB%BA%E5%A4%B1%E8%B4%A5-red
+          YAML=$(printf '\n```yaml\n%s\n```\n' "$(cat linglong.yaml)")
+          STATUS_ICON="![状态]($ERROR_ICON)"
+          STATUS="* linglong.yaml [$STATUS_ICON]($LINK)"
+          PKG_INFO=$(printf '\n```package\n%s\n```\n' "$(cat package.info)")
+          UPDATE_COMMENT_BODY=$(printf "%s\n%s\n%s\n%s\n" "$FAIL_MSG" "$STATUS" "$YAML" "$PKG_INFO")
+          gh api \
+            --method PATCH \
+            -H "Accept: application/vnd.github+json" \
+            /repos/${{ github.repository }}/issues/comments/$COMMENT_ID \
+            -f body="$UPDATE_COMMENT_BODY"
+        env:
+          BODY: ${{ github.event.issue.body }}
+          XDG_RUNTIME_DIR: /run/user/1001
+          COMMENT_ID: ${{steps.view.outputs.comment_id}}
+          LINK: ${{steps.check.outputs.link}}
+          FAIL_MSG: "构建失败, 请检查配置或工作流输出。"
+      - name: Release
+        if: ${{steps.check.outputs.valid=='yes'}}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{steps.check.outputs.package}}-${{github.event.issue.id}}
+          body: |
+            此构建请求来自 #${{github.event.issue.id}}, 构建目标为 `${{steps.check.outputs.package}}`。
+            * 构建参数
+            ```
+            ${{steps.check.outputs.config}}
+            ```
+            * linglong.yaml 项目文件
+            ```
+            ${{steps.check.outputs.linglong}}
+            ```
+          prerelease: ${{github.event.issue.state=='open'}}
+          files: |
+            "package.info"
+            "linglong.yaml"
+            ${{steps.build.outputs.output}}
