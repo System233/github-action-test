@@ -1,6 +1,5 @@
 #!/bin/bash
 set -e
-echo "DEBUG=$DEBUG"
 if [ -n "$DEBUG" ]; then
     set -x
 fi
@@ -62,6 +61,7 @@ function mount_data() {
     mount --rbind $ROOT_FS_DIR/tmp $MERGED_DIR/tmp
     mount --rbind $ROOT_FS_DIR/home $MERGED_DIR/home
     mount --rbind $ROOT_FS_DIR/proc $MERGED_DIR/proc
+    mkdir $MERGED_DIR/project && mount --rbind $ROOT_FS_DIR/project $MERGED_DIR/project || true
 }
 function clean() {
     find "$UPPER_DIR" '(' -type c -or -name ".wh..*opq" ')' -exec rm -f {} \;
@@ -72,7 +72,6 @@ function copy() {
 }
 function reexec() {
     # mode cmd ...args
-    echo "reexec $*"
     ls -l "$SELF"
     next=$1
     shift
