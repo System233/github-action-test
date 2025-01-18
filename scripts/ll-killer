@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+echo "DEBUG=$DEBUG"
 if [ -n "$DEBUG" ]; then
     set -x
 fi
@@ -71,9 +72,7 @@ function copy() {
 }
 function reexec() {
     # mode cmd ...args
-    if [ -n "$DEBUG" ]; then
-        echo "reexec $*"
-    fi
+    echo "reexec $*"
     next=$1
     shift
     exec "$@" "$SELF" "$next" "${ARGS[@]}"
