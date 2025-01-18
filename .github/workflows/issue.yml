@@ -77,7 +77,7 @@ jobs:
         if: always()
         run: |
           # Fetch all comments from the issue
-          EXISTING_COMMENT=$(gh api -X GET /repos/${{ github.repository }}/issues/$ISSUE_NUMBER/comments -q 'map(select(.user.login=="${{env.BOT_NAME}}"))[0]')
+          EXISTING_COMMENT=$(gh api -X GET /repos/${{ github.repository }}/issues/${{github.event.issue.id}}/comments -q 'map(select(.user.login=="${{env.BOT_NAME}}"))[0]')
           if [[ -n "$EXISTING_COMMENT" ]]; then
             # Extract the ID of the existing comment
             # Update the existing comment
@@ -90,7 +90,7 @@ jobs:
           else
             echo "No existing comment by $BOT_NAME found. Creating a new comment."
             # Create a new comment
-            COMMENT_ID=$(gh api -X POST "/repos/${{ github.repository }}/issues/$ISSUE_NUMBER/comments" -f body="$NET_COMMENT_BODY" | jq ".id") 
+            COMMENT_ID=$(gh api -X POST "/repos/${{ github.repository }}/issues/${{github.event.issue.id}}/comments" -f body="$NET_COMMENT_BODY" | jq ".id") 
           fi
           echo "comment_id=${COMMENT_ID}" >>$GITHUB_OUTPUT
         env:
