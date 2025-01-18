@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install linglong
-        if: ${{ !env.ACT && !env.NO_INSTALL }}
+        # if: ${{ !env.ACT && !env.NO_INSTALL }}
         run: |
           dpkg -l | grep libc6
           sudo apt install -y apt-transport-https ca-certificates curl gpg
@@ -150,7 +150,7 @@ jobs:
           ERROR_ICON=https://img.shields.io/badge/build-%E6%9E%84%E5%BB%BA%E5%A4%B1%E8%B4%A5-red
           TIME=$(LC_TIME=zh_CN.UTF-8 date)
           STATUS_ICON="![状态]($ERROR_ICON)"
-          STATUS_LINK=[$STATUS_ICON]($LINK)
+          STATUS_LINK="[$STATUS_ICON]($LINK)"
           LF=$'\n'
           UPDATE_COMMENT_BODY="${FAIL_MSG}
 
