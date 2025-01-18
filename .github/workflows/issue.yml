@@ -43,6 +43,7 @@ jobs:
           RUNNING="https://img.shields.io/badge/build-%E8%BF%90%E8%A1%8C%E4%B8%AD-blue"
           STATUS_ICON="![状态]($RUNNING)"
           STATUS_LINK="[$STATUS_ICON]($LINK)"
+          TIME=$(LC_TIME=zh_CN.UTF-8 date)
           function output(){
             echo "$1<<EOF" >>$GITHUB_OUTPUT
             echo "$2" >>$GITHUB_OUTPUT
@@ -59,8 +60,20 @@ jobs:
             else
               VALID=yes
               YAML=$(printf '\n```yaml\n%s\n```\n' "$(cat linglong.yaml)")
-              STATUS="* linglong.yaml"
-              MSG=$(printf "%s\n%s\n%s\n%s\n" "$VALID_MSG" "$STATUS_LINK" "$STATUS" "$YAML")
+              MSG="$VALID_MSG
+
+              $TIME
+              $STATUS_LINK
+
+              * linglong.yaml
+              \`\`\`yaml
+              $(cat linglong.yaml)
+              \`\`\`
+              
+              \`\`\`package
+              $PKG_INFO
+              \`\`\`
+              "
               package=$(cat package.info | sed -n "/^Package:/,/^[^ ]/p" | sed -E -e "s/^Package://" | grep '^\s' | sed -e 's/^\s*//' )
               output package "$package"
               output config "$(cat package.info)"
@@ -139,12 +152,24 @@ jobs:
         if: failure()
         run: |
           ERROR_ICON=https://img.shields.io/badge/build-%E6%9E%84%E5%BB%BA%E5%A4%B1%E8%B4%A5-red
-          YAML=$(printf '\n```yaml\n%s\n```\n' "$(cat linglong.yaml)")
+          TIME=$(LC_TIME=zh_CN.UTF-8 date)
           STATUS_ICON="![状态]($ERROR_ICON)"
           STATUS_LINK=[$STATUS_ICON]($LINK)
-          STATUS="* linglong.yaml"
-          PKG_INFO=$(printf '\n```package\n%s\n```\n' "$(cat package.info)")
-          UPDATE_COMMENT_BODY=$(printf "%s\n%s\n%s\n%s\n%s\n" "$FAIL_MSG" "$STATUS_LINK" "$STATUS" "$YAML" "$PKG_INFO")
+          LF=$'\n'
+          UPDATE_COMMENT_BODY="${FAIL_MSG}
+
+          $TIME
+          $STATUS_LINK
+
+          * linglong.yaml
+          \`\`\`yaml
+          $(cat linglong.yaml)
+          \`\`\`
+          
+          \`\`\`package
+          $(cat package.info)
+          \`\`\`
+          "
           gh api \
             --method PATCH \
             -H "Accept: application/vnd.github+json" \
