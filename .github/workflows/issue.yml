@@ -61,10 +61,12 @@ jobs:
           $TIME
           $STATUS_LINK
 
-          * linglong.yaml
+          ## 构建参数
+          \`\`\`package${LF}${PKG_INFO}${LF}\`\`\`
+          
+          ## linglong.yaml
           \`\`\`yaml${LF}$(cat linglong.yaml)${LF}\`\`\`
           
-          \`\`\`package${LF}${PKG_INFO}${LF}\`\`\`
               "
               base=$(grep -oP 'base:\s*\K.*$' linglong.yaml )
               package=$(pkg_info Package)
