@@ -1,11 +1,12 @@
 name: Comment or Update Issue Comment
 
+permissions:
+  issues: write
 on:
   issues:
     types:
       - opened
       - edited
-
 jobs:
   comment-or-update:
     runs-on: ubuntu-latest
