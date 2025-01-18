@@ -63,7 +63,7 @@ jobs:
 
           ## 构建参数
           \`\`\`package${LF}${PKG_INFO}${LF}\`\`\`
-          
+
           ## linglong.yaml
           \`\`\`yaml${LF}$(cat linglong.yaml)${LF}\`\`\`
           
@@ -150,7 +150,9 @@ jobs:
             echo "test" > "${{steps.check.outputs.package}}_binary.layer"
           fi
           output=$(basename $(find . -name "*binary.layer"))
+          sha1sum "$output" "package.info" "linglong.yaml" > checksum.sha1
           echo "output=${output}" >>$GITHUB_OUTPUT
+          echo "output_sha1=checksum.sha1" >>$GITHUB_OUTPUT
           echo "tag=${TAG}" >>$GITHUB_OUTPUT
         env:
           BODY: ${{ github.event.issue.body }}
@@ -177,7 +179,8 @@ jobs:
             package.info
             linglong.yaml
             ${{steps.build.outputs.output}}
-      - name: Reply Fail
+            ${{steps.build.outputs.output_sha1}}
+      - name: Reply Fail Result
         if: failure()
         run: |
           ERROR_ICON=https://img.shields.io/badge/build-%E6%9E%84%E5%BB%BA%E5%A4%B1%E8%B4%A5-red
@@ -214,7 +217,7 @@ jobs:
           LINK: ${{steps.check.outputs.link}}
           FAIL_MSG: "构建失败, 请检查配置或工作流输出。"
         working-directory: ${{ env.WORKING_DIR }}
-      - name: Reply Success
+      - name: Reply Success Result
         if: success()
         run: |
           OK_ICON="https://img.shields.io/badge/build-%E6%9E%84%E5%BB%BA%E6%88%90%E5%8A%9F-brigthgreen"
@@ -226,6 +229,13 @@ jobs:
 
           $TIME
           $STATUS_LINK
+
+          ## 构建输出
+          [${{steps.build.outputs.output}}]($DOWNLOAD_LINK)
+          * 哈希值
+          \`\`\`sha1
+          $(cat ${{steps.build.outputs.output_sha1}})
+          \`\`\`
 
           ## 构建参数
           \`\`\`package
@@ -249,5 +259,6 @@ jobs:
           XDG_RUNTIME_DIR: /run/user/1001
           COMMENT_ID: ${{steps.view.outputs.comment_id}}
           LINK: ${{steps.check.outputs.link}}
-          OK_MSG: "此请求已经构建成功，在[此处](${{github.server_url}}/${{github.repository}}/releases/tag/${{steps.build.outputs.tag}})查看或下载构建结果。"
+          OK_MSG: "此请求已经构建成功，可在[此处](${{github.server_url}}/${{github.repository}}/releases/tag/${{steps.build.outputs.tag}})查看或下载构建结果。"
+          DOWNLOAD_LINK: ${{github.server_url}}/${{github.repository}}/releases/download/${{steps.build.outputs.tag}}/${{steps.build.outputs.output}}
         working-directory: ${{ env.WORKING_DIR }}
