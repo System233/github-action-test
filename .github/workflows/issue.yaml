@@ -34,7 +34,7 @@ jobs:
             gh api \
               --method PATCH \
               -H "Accept: application/vnd.github+json" \
-              /repos/${{ github.repository }}/issues/$ISSUE_NUMBER/comments/$COMMENT_ID \
+              /repos/${{ github.repository }}/issues/comments/$COMMENT_ID \
               -f body="[updated] $COMMENT_BODY"
           else
             echo "No existing comment by $BOT_USERNAME found. Creating a new comment."
