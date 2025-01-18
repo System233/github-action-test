@@ -12,6 +12,9 @@ env:
   DEBUG: true
 jobs:
   issue:
+    defaults:
+      run:
+        working-directory: /tmp/ll-killer
     name: Issue
     if: ${{ !github.event.issue.pull_request&&github.event.issue.state=='open' }}
     runs-on: ubuntu-latest
