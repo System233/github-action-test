@@ -34,7 +34,8 @@ jobs:
         id: check
         run: |
           mkdir -p ${{ env.WORKING_DIR }}
-          cp -r . ${{ env.WORKING_DIR }}
+          sudo mount --rbind . ${{ env.WORKING_DIR }}
+          chmod 777 ${{ env.WORKING_DIR }}
           cd ${{ env.WORKING_DIR }}
           PKG_INFO=$(echo "$ISSUE_BODY"|grep -zoP '```package\s*\K[\s\S]*(?=```)')
 
