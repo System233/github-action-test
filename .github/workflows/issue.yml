@@ -6,7 +6,6 @@ on:
   issues:
     types: [opened,edited]
 env:
-  ACT: true
   NO_INSTALL: false
   NO_BUILD: false
   DEBUG: false
@@ -18,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install linglong
-        if: ${{ !env.ACT&&!env.NO_INSTALL }}
+        if: ${{ !env.ACT && !env.NO_INSTALL }}
         run: |
           dpkg -l | grep libc6
           sudo apt install -y apt-transport-https ca-certificates curl gpg
@@ -39,7 +38,7 @@ jobs:
           cd ${{ env.WORKING_DIR }}
           PKG_INFO=$(echo "$ISSUE_BODY"|grep -zoP '```package\s*\K[\s\S]*(?=```)')
 
-          LINK="https://$GITHUB_SERVER_URL/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          LINK="$GITHUB_SERVER_URL/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
 
           RUNNING="https://img.shields.io/badge/build-%E8%BF%90%E8%A1%8C%E4%B8%AD-blue"
           STATUS_ICON="![状态]($RUNNING)"
@@ -121,7 +120,7 @@ jobs:
         id: build
         if: ${{steps.check.outputs.valid=='yes'}}
         run: |
-          if [ ${{env.NO_BUILD}} !="true" ];then
+          if [ "${{env.NO_BUILD}}" !="true" ];then
             sudo mkdir -p $XDG_RUNTIME_DIR
             sudo chown -R 1001:1001 $XDG_RUNTIME_DIR
             sudo chmod 0700 $XDG_RUNTIME_DIR
