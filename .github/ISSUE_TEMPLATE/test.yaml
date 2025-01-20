@@ -11,18 +11,12 @@ body:
 
         以下为 Deepin V23 环境的 deb 包参数模板，若 deb 包基于 Deepin V20 或 UOS 环境，请参考底部的模板。
 
-        **参数说明：**
-        - **Package**: 必填，deb 包名称。
-        - **Base**: 可选，基础构建环境，默认为 `org.deepin.base/23.1.0`。
-        - **APT-Sources**: 可选，使用的 APT 软件源，支持多个源，请使用 `[trusted=yes]` 忽略签名。
-        - **Description**: 可选，软件包的描述信息，支持多行内容，行首有一个普通空格。
-
   - type: textarea
     id: build-parameters
     attributes:
       label: 构建参数
       description: 请在下方填写所有构建参数
-      placeholder: |
+      value: |
         ```package
         Package: <deb包名>
         Base: org.deepin.base/23.1.0
@@ -35,10 +29,20 @@ body:
   - type: markdown
     attributes:
       value: >
+        ### 参数说明
+        ```
+        Package: 必填，deb包名称
+        Name: 可选，应用程序的名称，默认为软件包名称
+        Version: 可选，软件包的版本号，默认构建最新版本
+        Base: 可选，基础构建环境，默认为 `org.deepin.base/23.1.0`
+        Runtime: 可选，构建 Runtime 环境，不建议使用
+        Depends: 可选，其他依赖包列表，可使用逗号或空格分隔
+        APT-Sources: 可选，使用的 APT 软件源，支持多个源，请使用 `[trusted=yes]` 忽略签名
+        Description: 可选，软件包的描述信息，支持多行内容，请确保多行内容的行首有一个普通空格
+        ```
         ### 示例模板
         [GIMP](https://github.com/System233/linglong-killer-self-service/blob/main/tests/gimp.md)
-
-
+        
         ### Deepin V20/UOS 环境模板
         ```package
         Package: <deb包名>
