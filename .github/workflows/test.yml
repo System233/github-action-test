@@ -6,7 +6,7 @@ jobs:
     runs-on: windows-11-arm
     steps:
       - name: Run
-        shell: git-bash
+        shell: "C:\\Program Files\\Git\\git-bash.exe"
         run: |
           wget https://github.com/System233/ffmpeg-msvc-prebuilt/releases/download/n7.1-241205/ffmpeg-n7.1-241205-gpl-arm64-shared.zip
           unzip ffmpeg-n7.1-241205-gpl-arm64-shared.zip -d ffmpeg-n7.1-241205-gpl-arm64-shared
