@@ -8,11 +8,11 @@ jobs:
       - name: Run
         shell: bash
         run: |
-          wget https://github.com/System233/ffmpeg-msvc-prebuilt/releases/download/n7.1-241205/ffmpeg-n7.1-241205-gpl-arm64-shared.zip
-          unzip ffmpeg-n7.1-241205-gpl-arm64-shared.zip -d ffmpeg-n7.1-241205-gpl-arm64-shared
+          curl -L -o ffmpeg.zip https://github.com/System233/ffmpeg-msvc-prebuilt/releases/download/n7.1-241205/ffmpeg-n7.1-241205-gpl-arm64-shared.zip
+          unzip ffmpeg.zip -d ffmpeg
           echo "[encoders]"
-          ./ffmpeg-n7.1-241205-gpl-arm64-shared/bin/ffmpeg.exe -encoders
+          ./ffmpeg/bin/ffmpeg.exe -encoders
           echo "[decoders]"
-          ./ffmpeg-n7.1-241205-gpl-arm64-shared/bin/ffmpeg.exe -decoders
+          ./ffmpeg/bin/ffmpeg.exe -decoders
           echo "[codecs]"
-          ./ffmpeg-n7.1-241205-gpl-arm64-shared/bin/ffmpeg.exe -codecs
+          ./ffmpeg/bin/ffmpeg.exe -codecs
